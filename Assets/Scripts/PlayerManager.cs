@@ -1,123 +1,114 @@
 using System.Collections;
 using System.Collections.Generic;
-using Unity.Profiling;
 using UnityEngine;
 using UnityEngine.UI;
 
 public class PlayerManager : MonoBehaviour
 {
-    public HandleButton btnBack;
-    public HandleButton btnForward;
-    public Image progressBarFilling;
-    public Player Player;
-    public GameObject player;
+    public float hp;
+    public float hpMax;
+    public float stamina;
+    public float staminaMax;
+    public float damage;
+    public float forcePower;
+    public float jumpCost;
+    bool isHit;
+    bool isIdle;
+    Coroutine immuneCoroutine;
+    public LayerMask damageable;
+    public Transform checkGround;
+    public LayerMask ground;
+    private Rigidbody rb;
+    private BoxCollider perfectHitBox;
+    private CapsuleCollider playerCollider;
 
-    public float force = 1f;
-    public float power = 100f;
-    public float chagreForce;
-    public float currentPower;
-    public float jump = 3f;
-    public float jumpCost = 15f;
-
-    private void Awake()
+    // Start is called before the first frame update
+    private void OnValidate()
     {
-        btnBack.Init(Back, ReleaseBack);
-        btnForward.Init(Forward, ReleaseForward);
-        currentPower = power;
-        progressBarFilling.fillAmount = currentPower / power;
+        rb = GetComponent<Rigidbody>();
+        perfectHitBox = GetComponentInChildren<BoxCollider>();
+        playerCollider = GetComponent<CapsuleCollider>();
+    }
+    void Start()
+    {
+        hp = hpMax;
     }
 
-    public void Back()
-    {
-        if (Player.IsGrounded() && currentPower > 15f)
-        {
-            currentPower -= jumpCost; HandlePower();
-            float offset = force * Random.Range(95, 105) / 100;
-            Vector3 input = new Vector3(-offset, 1, 0);
-            Player.rb.AddForce(input * jump, ForceMode.VelocityChange);
-        }
-    }
-
-    public void ReleaseBack(float abc)
+    // Update is called once per frame
+    void Update()
     {
 
     }
-
-    public void Forward()
+    public void Jump(float x, float y, float z)
     {
-        if (Player.IsGrounded())
-        {
-            StartCoroutine(Charge());
-            float offset = force * Random.Range(95, 105) / 100;
-            Player.rb.AddForce(new Vector3(offset * chagreForce, 4, 0), ForceMode.Impulse);
-
-        }
+        rb.AddForce(new Vector3(x, y, z));
     }
 
-    public void ReleaseForward(float abc)
+    public void TakeDamage(float damage)
     {
-
-    }
-
-    public void HandlePower()
-    {
-        if (currentPower > power)
+        if (!isHit)
         {
-            currentPower = power;
-        }
-        if (currentPower < 0)
-        {
-            currentPower = 0;
-        }
-        progressBarFilling.fillAmount =
-            (currentPower > 0 && power > 0) ? ((float)currentPower / (float)power) : 0;
-    }
-
-    public void ChargePower()
-    {
-
-        if (btnForward.timer < 4)
-        {
-            chagreForce = 12;
-        }
-        if (btnForward.timer < 3)
-        {
-            chagreForce = 9;
-        }
-        if (btnForward.timer < 2)
-        {
-            chagreForce = 6;
-        }
-        if (btnForward.timer < 1)
-        {
-            chagreForce = 3;
-        }
-
-    }
-
-    IEnumerator Charge()
-    {
-        while (btnForward.IsTouch)
-        {
-            Debug.Log("charge");
-            currentPower -= jumpCost;
-            HandlePower();
-            ChargePower();
-            yield return new WaitForSeconds(1);
+            if (immuneCoroutine == null)
+            {
+                StartCoroutine(ImmuneCoroutine(1f));
+            }
+            hp -= damage;
         }
     }
-
-    /*public IEnumerator Recuit()
+    IEnumerator ImmuneCoroutine(float timeImmune)
     {
-        while (!btnForward.IsTouch && !btnBack.IsTouch)
+        isHit = true;
+        yield return new WaitForSeconds(timeImmune);
+        isHit = false;
+    }
+    public bool IsGrounded()
+    {
+        return Physics.CheckSphere(checkGround.position, 0.1f, ground);
+    }
+
+    private void OnCollisionEnter(Collision collision)
+    {
+        if (collision.gameObject.tag == "Enemy")
         {
-            Debug.Log("recuit");
-            currentPower += 5f;
-            HandlePower();
-            yield return new WaitForSeconds(1);
-            Debug.Log("hmm");
+            PlayerController player = GetComponent<PlayerController>();
+            if (Physics.Raycast(transform.position, rb.velocity, 10f, damageable) && player.isCharge)
+            {
+                Debug.Log("hit true");
+                PlayerManager enemy = collision.transform.GetComponent<PlayerManager>();
+                enemy.TakeDamage(damage);
+                enemy.KnockBack();
+            }
+            else
+            {
+                Debug.Log("hit false");
+            }
         }
-    }*/
-
-
+    }
+    private void OnDrawGizmos()
+    {
+        Debug.DrawLine(transform.position, rb.velocity, Color.green);
+    }
+    public void KnockBack()
+    {
+        float offset = Random.Range(2, 4);
+        Debug.Log("offset knockBack: " + offset);
+        Vector3 input = new Vector3(offset, 2f, 0f);
+        rb.AddForce(input, ForceMode.VelocityChange);
+    }
+    public IEnumerator StaminaRegen(float speedRegen)
+    {
+        while (isIdle)
+        {
+            if (stamina < staminaMax)
+            {
+                stamina += speedRegen;
+                yield return new WaitForSeconds(1);
+            }
+            else
+            {
+                stamina = staminaMax;
+                break;
+            }
+        }
+    }
 }
