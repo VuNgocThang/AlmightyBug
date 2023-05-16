@@ -12,30 +12,34 @@ public class PlayerManager : MonoBehaviour
     public float damage;
     public float forcePower;
     public float jumpCost;
+
     bool isHit;
     bool isIdle;
+    public bool isKnockBack;
+
     Coroutine immuneCoroutine;
     public LayerMask damageable;
     public Transform checkGround;
     public LayerMask ground;
     private Rigidbody rb;
-    private BoxCollider perfectHitBox;
+    //private BoxCollider perfectHitBox;
     private CapsuleCollider playerCollider;
 
-    // Start is called before the first frame update
+    public Image hpBar;
+    public Image staminaBar;
+
     private void OnValidate()
     {
         rb = GetComponent<Rigidbody>();
-        perfectHitBox = GetComponentInChildren<BoxCollider>();
+        //perfectHitBox = GetComponentInChildren<BoxCollider>();
         playerCollider = GetComponent<CapsuleCollider>();
     }
-    void Start()
+    void Awake()
     {
         hp = hpMax;
+        stamina = staminaMax;
     }
-
-    // Update is called once per frame
-    void Update()
+    private void Start()
     {
 
     }
@@ -53,6 +57,7 @@ public class PlayerManager : MonoBehaviour
                 StartCoroutine(ImmuneCoroutine(1f));
             }
             hp -= damage;
+            Debug.Log("hp" + hp);
         }
     }
     IEnumerator ImmuneCoroutine(float timeImmune)
@@ -65,50 +70,75 @@ public class PlayerManager : MonoBehaviour
     {
         return Physics.CheckSphere(checkGround.position, 0.1f, ground);
     }
-
     private void OnCollisionEnter(Collision collision)
     {
         if (collision.gameObject.tag == "Enemy")
         {
             PlayerController player = GetComponent<PlayerController>();
+            PlayerManager enemy = collision.transform.GetComponent<PlayerManager>();
             if (Physics.Raycast(transform.position, rb.velocity, 10f, damageable) && player.isCharge)
             {
-                Debug.Log("hit true");
-                PlayerManager enemy = collision.transform.GetComponent<PlayerManager>();
+                Debug.Log("hit true and dame..." + player.isCharge);
                 enemy.TakeDamage(damage);
-                enemy.KnockBack();
+                enemy.KnockBack(3, 5);
+            }
+            else if (!Physics.Raycast(transform.position, rb.velocity, 10f, damageable) && player.isCharge)
+            {
+                Debug.Log("hit false but dame..." + player.isCharge);
+                float damageReduce = damage * 0.2f;
+                enemy.TakeDamage(damageReduce);
+                enemy.KnockBack(2, 4);
             }
             else
             {
-                Debug.Log("hit false");
+                Debug.Log("hit true and no dame, no charge..." + player.isCharge);
+                enemy.TakeDamage(0);
             }
+
         }
     }
     private void OnDrawGizmos()
     {
         Debug.DrawLine(transform.position, rb.velocity, Color.green);
     }
-    public void KnockBack()
+    public void KnockBack(float a, float b)
     {
-        float offset = Random.Range(2, 4);
+        float offset = Random.Range(a, b);
         Debug.Log("offset knockBack: " + offset);
+        isKnockBack = true;
         Vector3 input = new Vector3(offset, 2f, 0f);
         rb.AddForce(input, ForceMode.VelocityChange);
     }
+    public void UpdateHp()
+    {
+        if (hp > hpMax) hp = hpMax;
+        if (hp < 0) hp = 0;
+        hpBar.fillAmount = hp / hpMax;
+    }
+    public void UpdateStamina()
+    {
+        if (stamina > staminaMax) stamina = staminaMax;
+        if (stamina < 0) stamina = 0;
+        staminaBar.fillAmount = stamina / staminaMax;
+    }
     public IEnumerator StaminaRegen(float speedRegen)
     {
-        while (isIdle)
+        while (true)
         {
-            if (stamina < staminaMax)
+            if (IsGrounded())
             {
-                stamina += speedRegen;
-                yield return new WaitForSeconds(1);
+                if (stamina < staminaMax)
+                {
+                    stamina += speedRegen;
+                    Debug.Log("regen stamina");
+                }
+                else
+                {
+                    stamina = staminaMax;
+                }
+
             }
-            else
-            {
-                stamina = staminaMax;
-                break;
-            }
+            yield return new WaitForSeconds(1);
         }
     }
 }

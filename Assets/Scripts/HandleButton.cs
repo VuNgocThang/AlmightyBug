@@ -10,13 +10,7 @@ public class HandleButton : MonoBehaviour, IPointerDownHandler, IPointerExitHand
 
     public bool IsTouch = false;
     Action onTouch;
-    //Action<float> onRelease;
 
-    /*public void Init(Action onTouch, Action<float> onRelease)
-    {
-        this.onTouch = onTouch;
-        this.onRelease = onRelease;
-    }*/
     public void Init(Action onTouch)
     {
         this.onTouch = onTouch;
@@ -25,7 +19,6 @@ public class HandleButton : MonoBehaviour, IPointerDownHandler, IPointerExitHand
     public virtual void OnPointerDown(PointerEventData eventData)
     {
         IsTouch = true;
-        //onTouch?.Invoke();
         timer = 0;
     }
     public virtual void OnPointerExit(PointerEventData eventData)
@@ -50,5 +43,6 @@ public class HandleButton : MonoBehaviour, IPointerDownHandler, IPointerExitHand
     void Update()
     {
         timer += Time.deltaTime;
+        //Debug.Log(timer + " timer");
     }
 }

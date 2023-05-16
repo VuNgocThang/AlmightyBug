@@ -5,26 +5,19 @@ using UnityEngine;
 public class EnemyController : PlayerManager
 {
     public CalDistance calDistance;
+    public bool canBlock;
+    public float speed = 1f;
 
     private void FixedUpdate()
     {
+        UpdateHp();
         if (calDistance.distance > 10f)
         {
-            Debug.Log("move");
+            if (IsGrounded())
+            {
+                transform.Translate(Vector3.left * speed * Time.fixedDeltaTime);
+            }
         }
-        else
-        {
-            Debug.Log("use skill");
-        }
-    }
-    public void Move()
-    {
-
-    }
-
-    public void UseSkill()
-    {
-
     }
 
 
